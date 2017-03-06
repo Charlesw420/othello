@@ -68,6 +68,108 @@ bool Board::hasMoves(Side side) {
 }
 
 /*
+ * CW
+ * Fills a vector with the current available moves
+ */
+void Board::allMoves(std::vector<Move> *moves, Side side)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 0; j < 8; j++)
+        {
+            Move move(i,j);
+            if (checkMove(&move, side))
+            {
+                moves->push_back(move);
+            }
+        }
+    }
+}
+
+/*
+ * CW
+ * Returns a random available move, or returns nullptr
+ */
+Move *Board::randomMove(Side side)
+{
+    // Find all possible moves
+    std::vector<Move> moves;
+    allMoves(&moves, side);
+    // If no moves, return nullptr
+    if (moves.size() == 0)
+    {
+        return nullptr;
+    }
+    // Pick random move
+    int index = rand() % moves.size();
+    return new Move(moves[index]);
+}
+
+/*
+ * CW
+ * Returns the best move according to a heuristic.
+ */
+Move *Board::heuristicMove(Side side)
+{
+    // Find all possible moves
+    std::vector<Move> moves;
+    allMoves(&moves, side);
+    // If no moves, return nullptr
+    if (moves.size() == 0)
+    {
+        return nullptr;
+    }
+    // Find best move
+    int best = 0;
+    int tileAdvantage = -64;    // maximum tile difference on 8x8 board
+    for (int i = 0; i < (int) moves.size(); i++)
+    {
+        // Simulate move
+        Board *hypothetical = copy();
+        hypothetical->doMove(&moves[i],side);
+        // Evaluate strength of move
+        int strength = hypothetical->countAdvantage(side);
+        // If move is in corner, favor this move!
+        if (isCorner(&moves[i]))
+        {
+            strength *= 3;
+        }
+        // If move is adjacent to corner, disfavor this move!
+        if (isNextToCorner(&moves[i]))
+        {
+            strength *= -3;
+        }
+        if (strength > tileAdvantage)
+        {
+            best = i;
+            tileAdvantage = strength;
+        }
+    }
+    return new Move(moves[best]);
+}
+
+/*
+ * CW
+ * Returns the best minimax move for n-ply depth.
+ */
+Move *Board::minimax(Side side, Side home, int depth)
+{
+    // Find all possible moves
+    std::vector<Move> moves;
+    allMoves(&moves, side);
+    // If no moves, return nullptr
+    if (moves.size() == 0)
+    {
+        return nullptr;
+    }
+    // Find best move
+    
+    
+    
+    return nullptr;
+}
+
+/*
  * Returns true if a move is legal for the given side; false otherwise.
  */
 bool Board::checkMove(Move *m, Side side) {
@@ -139,6 +241,59 @@ void Board::doMove(Move *m, Side side) {
         }
     }
     set(side, X, Y);
+}
+
+/*
+ * CW
+ * If this space is a corner, return true.
+ */
+bool Board::isCorner(Move *m)
+{
+    // Check for 00,07,70,77
+    if (m->x == 0 || m->x == 7)
+    {
+        if (m->y == 0 || m->y == 7)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * CW
+ * If this space is adjacent to a corner, return true.
+ */
+bool Board::isNextToCorner(Move *m)
+{
+    // Check for:
+    // 01,06,
+    // 71,76,
+    // 10,11,16,17,
+    // 60,61,66,67
+    if (m->x == 0 || m->x == 7)
+    {
+        if (m->y == 1 || m->y == 6)
+        {
+            return true;
+        }
+    }
+    if (m->x == 1 || m->x == 6)
+    {
+        if (m->y < 2 || m->y > 5)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * Current count of given side's stone advantage.
+ */
+int Board::countAdvantage(Side side) {
+    return (side == BLACK) ? countBlack() - countWhite()
+                           : countWhite() - countBlack();
 }
 
 /*

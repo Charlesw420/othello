@@ -14,9 +14,12 @@ Player::Player(Side side) {
      * precalculating things, etc.) However, remember that you will only have
      * 30 seconds.
      */
-    /*
-     * test1
-     */
+    home = side;
+    guest = BLACK;
+    if (home == guest)
+    {
+        guest = WHITE;
+    }
 }
 
 /*
@@ -43,5 +46,16 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
      * TODO: Implement how moves your AI should play here. You should first
      * process the opponent's opponents move before calculating your own move
      */
-    return nullptr;
+    // Update with opponent's move
+    board.doMove(opponentsMove,guest);
+    // Update with my move
+    
+    // Random Move
+    // Move *myMove = board.randomMove(home);
+    
+    // Heuristic Move
+    Move *myMove = board.heuristicMove(home);
+    
+    board.doMove(myMove,home);
+    return myMove;
 }

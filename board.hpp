@@ -3,6 +3,8 @@
 
 #include <bitset>
 #include "common.hpp"
+#include <vector>   // vector
+#include <stdlib.h> // rand
 using namespace std;
 
 class Board {
@@ -23,8 +25,15 @@ public:
 
     bool isDone();
     bool hasMoves(Side side);
+    void allMoves(std::vector<Move> *moves, Side side);
+    Move *randomMove(Side side);
+    Move *heuristicMove(Side side);
+    Move *minimax(Side side, Side home, int n);
     bool checkMove(Move *m, Side side);
     void doMove(Move *m, Side side);
+    bool isCorner(Move *m);
+    bool isNextToCorner(Move *m);
+    int countAdvantage(Side side);
     int count(Side side);
     int countBlack();
     int countWhite();
