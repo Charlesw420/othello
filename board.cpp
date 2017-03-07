@@ -121,24 +121,14 @@ Move *Board::heuristicMove(Side side)
     }
     // Find best move
     int best = 0;
-    int tileAdvantage = -64;    // maximum tile difference on 8x8 board
+    int tileAdvantage = -64 - 20;    // maximum tile difference on 8x8 board
     for (int i = 0; i < (int) moves.size(); i++)
     {
         // Simulate move
         Board *hypothetical = copy();
         hypothetical->doMove(&moves[i],side);
         // Evaluate strength of move
-        int strength = hypothetical->countAdvantage(side);
-        // If move is in corner, favor this move!
-        if (isCorner(&moves[i]))
-        {
-            strength *= 3;
-        }
-        // If move is adjacent to corner, disfavor this move!
-        if (isNextToCorner(&moves[i]))
-        {
-            strength *= -3;
-        }
+        int strength = hypothetical->heuristic(&moves[i], side);
         if (strength > tileAdvantage)
         {
             best = i;
@@ -152,7 +142,7 @@ Move *Board::heuristicMove(Side side)
  * CW
  * Returns the best minimax move for n-ply depth.
  */
-Move *Board::minimax(Side side, Side home, int depth)
+Move *Board::minimax(Side side, int depth)
 {
     // Find all possible moves
     std::vector<Move> moves;
@@ -162,11 +152,93 @@ Move *Board::minimax(Side side, Side home, int depth)
     {
         return nullptr;
     }
-    // Find best move
+    // Find the minimum score along each branch
+    std::vector<int> minScores(moves.size());
+    for (int i = 0; i < (int) moves.size(); i++)
+    {
+        // Create new board and make move
+        Board *branch = copy(); //// Do I need to delete this memory?
+        // Opposite side's turn
+        if (side == BLACK)
+        {
+            minScores[i] = branch->findMinScores(WHITE, side, depth - 1);
+        }
+        else
+        {
+            minScores[i] = branch->findMinScores(BLACK, side, depth - 1);
+        }
+        // Apply heuristic to home side
+        minScores[i] += heuristic(&moves[i], side);
+    }
+    // Find the highest minimum score
+    int best = 0;
+    int bestScore = -64 - 20;   // absolute minimum score
+    for (int i = 0; i < (int) moves.size(); i++)
+    {
+        if (minScores[i] > bestScore)
+        {
+            best = i;
+            bestScore = minScores[i];
+        }
+    }
+    return new Move(moves[best]);
+}
+
+/*
+ * CW
+ * Find minimum score of this branch.
+ */
+int Board::findMinScores(Side side, Side home, int depth)
+{
+    if (depth == 0)
+    {
+        return 0;
+    }
+    
+    // Find all possible moves
+    std::vector<Move> moves;
+    allMoves(&moves, side);
+    // If no moves...
+    if (moves.size() == 0)
+    {
+        // If home side, this is bad
+        if (side == home)
+        {
+            return -20;
+        }
+        // If guest side, this is good
+        return 20;
+    }
+    // Find the minimum score along each branch
+    std::vector<int> minScores(moves.size());
+    for (int i = 0; i < (int) moves.size(); i++)
+    {
+        // Create new board and make move
+        Board *branch = copy();
+        // Opposite side's turn
+        if (side == BLACK)
+        {
+            minScores[i] = branch->findMinScores(WHITE, home, depth - 1);
+        }
+        else
+        {
+            minScores[i] = branch->findMinScores(BLACK, home, depth - 1);
+        }
+        // Apply heuristic to home side.
+        minScores[i] = heuristic(&moves[i], home);
+    }
     
     
-    
-    return nullptr;
+    // Find the minimum score
+    int min_score = 64 + 20;   // absolute maximum score
+    for (int i = 0; i < (int) moves.size(); i++)
+    {
+        if (minScores[i] < min_score)
+        {
+            min_score = minScores[i];
+        }
+    }
+    return min_score;
 }
 
 /*
@@ -245,6 +317,33 @@ void Board::doMove(Move *m, Side side) {
 
 /*
  * CW
+ * Heuristic that:
+ * Adds 20 to score if move is at a corner.
+ * Subtracts 20 to score if move is adjacent to a corner.
+ */
+int Board::heuristic(Move *m, Side side)
+{
+    // Count tile advantage.
+    int score = countAdvantage(side);
+    
+    // Use addition instead of multiplication.
+    // Multiplication will not help if you have fewer tiles
+    
+    // If move is in corner, favor this move!
+    if (isCorner(m))
+    {
+        score += 40;
+    }
+    // If move is adjacent to corner, disfavor this move!
+    if (isNextToCorner(m))
+    {
+        score -= 20;
+    }
+    return score;
+}
+
+/*
+ * CW
  * If this space is a corner, return true.
  */
 bool Board::isCorner(Move *m)
@@ -271,7 +370,7 @@ bool Board::isNextToCorner(Move *m)
     // 71,76,
     // 10,11,16,17,
     // 60,61,66,67
-    if (m->x == 0 || m->x == 7)
+    if (m->x == 1 || m->x == 6)
     {
         if (m->y == 1 || m->y == 6)
         {

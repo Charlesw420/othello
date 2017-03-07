@@ -54,7 +54,10 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     // Move *myMove = board.randomMove(home);
     
     // Heuristic Move
-    Move *myMove = board.heuristicMove(home);
+    // Move *myMove = board.heuristicMove(home);
+    
+    // Minimax Move
+    Move *myMove = board.minimax(home, 2);
     
     board.doMove(myMove,home);
     return myMove;
