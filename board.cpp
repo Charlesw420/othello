@@ -142,43 +142,44 @@ Move *Board::heuristicMove(Side side)
  * CW
  * Returns the best minimax move for n-ply depth.
  */
-Move *Board::minimax(Side side, int depth)
+Move *Board::minimaxMove(Side home, int depth)
 {
     // Find all possible moves
     std::vector<Move> moves;
-    allMoves(&moves, side);
+    allMoves(&moves, home);
     // If no moves, return nullptr
     if (moves.size() == 0)
     {
         return nullptr;
     }
-    // Find the minimum score along each branch
-    std::vector<int> minScores(moves.size());
+    // Find the scores along each branch
+    std::vector<int> scores(moves.size());
     for (int i = 0; i < (int) moves.size(); i++)
     {
         // Create new board and make move
         Board *branch = copy(); //// Do I need to delete this memory?
+        branch->doMove(&moves[i], home);
         // Opposite side's turn
-        if (side == BLACK)
+        if (home == BLACK)
         {
-            minScores[i] = branch->findMinScores(WHITE, side, depth - 1);
+            scores[i] = branch->minimax(WHITE, home, depth - 1);
         }
         else
         {
-            minScores[i] = branch->findMinScores(BLACK, side, depth - 1);
+            scores[i] = branch->minimax(BLACK, home, depth - 1);
         }
-        // Apply heuristic to home side
-        minScores[i] += heuristic(&moves[i], side);
+        // Apply heuristic to HOME after the move
+        scores[i] += branch->heuristic(&moves[i], home);
     }
-    // Find the highest minimum score
+    // Find the highest score
     int best = 0;
-    int bestScore = -64 - 20;   // absolute minimum score
+    int bestScore = scores[best];   // absolute minimum score
     for (int i = 0; i < (int) moves.size(); i++)
     {
-        if (minScores[i] > bestScore)
+        if (scores[i] > bestScore)
         {
             best = i;
-            bestScore = minScores[i];
+            bestScore = scores[best];
         }
     }
     return new Move(moves[best]);
@@ -186,11 +187,11 @@ Move *Board::minimax(Side side, int depth)
 
 /*
  * CW
- * Find minimum score of this branch.
+ * Returns the minimax score for current branch.
  */
-int Board::findMinScores(Side side, Side home, int depth)
+int Board::minimax(Side side, Side home, int depth)
 {
-    if (depth == 0)
+    if (depth < 0)
     {
         return 0;
     }
@@ -201,44 +202,68 @@ int Board::findMinScores(Side side, Side home, int depth)
     // If no moves...
     if (moves.size() == 0)
     {
-        // If home side, this is bad
+        // If it's HOME's move, this is bad
         if (side == home)
         {
-            return -20;
+            return -60;
         }
-        // If guest side, this is good
-        return 20;
+        // If it's GUEST's turn, this is good
+        return 60;
     }
-    // Find the minimum score along each branch
-    std::vector<int> minScores(moves.size());
+    // Find the best score for SIDE along each branch
+    std::vector<int> scores(moves.size());
     for (int i = 0; i < (int) moves.size(); i++)
     {
         // Create new board and make move
-        Board *branch = copy();
-        // Opposite side's turn
+        Board *branch = copy(); //// Do I need to delete this memory?
+        branch->doMove(&moves[i], side);
+        // How favorable is this move for HOME? Opposite side's move.
         if (side == BLACK)
         {
-            minScores[i] = branch->findMinScores(WHITE, home, depth - 1);
+            scores[i] = branch->minimax(WHITE, home, depth - 1);
         }
         else
         {
-            minScores[i] = branch->findMinScores(BLACK, home, depth - 1);
+            scores[i] = branch->minimax(BLACK, home, depth - 1);
         }
-        // Apply heuristic to home side.
-        minScores[i] = heuristic(&moves[i], home);
-    }
-    
-    
-    // Find the minimum score
-    int min_score = 64 + 20;   // absolute maximum score
-    for (int i = 0; i < (int) moves.size(); i++)
-    {
-        if (minScores[i] < min_score)
+        // Apply heuristic after the current move
+        // If it's HOME's move, add the heuristic
+        if (side == home)
         {
-            min_score = minScores[i];
+            scores[i] += branch->heuristic(&moves[i], side);
+        }
+        // If it's GUEST's move, subtract the heuristic
+        else
+        {
+            scores[i] -= branch->heuristic(&moves[i], side);
         }
     }
-    return min_score;
+    // If it's HOME's move, return the highest score
+    if (side == home)
+    {
+        int max = scores[0];
+        for (int i = 1; i < (int) moves.size(); i++)
+        {
+            if (scores[i] > max)
+            {
+                max = scores[i];
+            }
+        }
+        return max;
+    }
+    // If it's GUEST's move, return the lowest score
+    else
+    {
+        int min = scores[0];
+        for (int i = 1; i < (int) moves.size(); i++)
+        {
+            if (scores[i] < min)
+            {
+                min = scores[i];
+            }
+        }
+        return min;
+    }
 }
 
 /*
@@ -334,10 +359,20 @@ int Board::heuristic(Move *m, Side side)
     {
         score += 40;
     }
-    // If move is adjacent to corner, disfavor this move!
+    // If move is an edge, favor this move
+    if (isEdge(m))
+    {
+        score += 20;
+    }
+    // If move is next to corner, disfavor this move!
     if (isNextToCorner(m))
     {
-        score -= 20;
+        score -= 10;
+    }
+    // If move is next to edge, disfavor this move
+    if (isNextToEdge(m))
+    {
+        score -= 30;
     }
     return score;
 }
@@ -361,6 +396,19 @@ bool Board::isCorner(Move *m)
 
 /*
  * CW
+ * If this space is an edge, return true.
+ */
+bool Board::isEdge(Move *m)
+{
+    if (m->x == 0 || m->x == 7 || m->y == 0 || m->y == 7)
+    {
+        return true;
+    }
+    return false;
+}
+
+/*
+ * CW
  * If this space is adjacent to a corner, return true.
  */
 bool Board::isNextToCorner(Move *m)
@@ -370,7 +418,7 @@ bool Board::isNextToCorner(Move *m)
     // 71,76,
     // 10,11,16,17,
     // 60,61,66,67
-    if (m->x == 1 || m->x == 6)
+    if (m->x == 0 || m->x == 7)
     {
         if (m->y == 1 || m->y == 6)
         {
@@ -380,6 +428,22 @@ bool Board::isNextToCorner(Move *m)
     if (m->x == 1 || m->x == 6)
     {
         if (m->y < 2 || m->y > 5)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * CW
+ * If this space is next to an edge, return true.
+ */
+bool Board::isNextToEdge(Move *m)
+{
+    if (m->x == 1 || m->x == 6 || m->y == 1 || m->y == 6)
+    {
+        if (m->x > 0 && m->x < 7 && m->y > 0 && m->y < 7)
         {
             return true;
         }

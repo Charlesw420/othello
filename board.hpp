@@ -28,12 +28,14 @@ public:
     void allMoves(std::vector<Move> *moves, Side side);
     Move *randomMove(Side side);
     Move *heuristicMove(Side side);
-    Move *minimax(Side side, int depth);
-    int findMinScores(Side side, Side home, int depth);
+    Move *minimaxMove(Side side, int depth);
+    int minimax(Side side, Side home, int depth);
     bool checkMove(Move *m, Side side);
     void doMove(Move *m, Side side);
     bool isCorner(Move *m);
+    bool isEdge(Move *m);
     bool isNextToCorner(Move *m);
+    bool isNextToEdge(Move *m);
     int heuristic(Move *m, Side side);
     int countAdvantage(Side side);
     int count(Side side);

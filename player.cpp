@@ -57,8 +57,13 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     // Move *myMove = board.heuristicMove(home);
     
     // Minimax Move
-    Move *myMove = board.minimax(home, 2);
+    Move *myMove = board.minimaxMove(home, 3);
     
     board.doMove(myMove,home);
     return myMove;
+}
+
+void Player::setUpBoard(char data[])
+{
+    board.setBoard(data);
 }
