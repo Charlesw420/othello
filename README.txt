@@ -1,1 +1,1 @@
- 
+The minimax algorithm now works. The heuristic is calculated using addition and subtraction as opposed to multiplication so that a a negative multiplier doesn't turn a bad score into a very good one.
